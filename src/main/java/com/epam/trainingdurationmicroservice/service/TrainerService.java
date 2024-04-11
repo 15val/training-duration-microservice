@@ -68,6 +68,7 @@ public class TrainerService {
 
 			if (actionType.equalsIgnoreCase("ADD")) {
 				Integer modifiedDuration = duration + yearMap.get(String.valueOf(trainingDate.getMonth()));
+				log.info(modifiedDuration + " minutes");
 				yearMap.put(String.valueOf(trainingDate.getMonth()), modifiedDuration);
 				durationMap.put(String.valueOf(trainingDate.getYear()), yearMap);
 			} else if (actionType.equalsIgnoreCase("DELETE")) {
@@ -76,6 +77,7 @@ public class TrainerService {
 					modifiedDuration = 0;
 				}
 				yearMap.put(String.valueOf(trainingDate.getMonth()), modifiedDuration);
+				log.info(modifiedDuration + " minutes");
 				durationMap.put(String.valueOf(trainingDate.getYear()), yearMap);
 			} else {
 				throw new UnsupportedOperationException("Unsupported action type");
@@ -85,11 +87,10 @@ public class TrainerService {
 			trainer.setLastName(lastName);
 			trainer.setUsername(username);
 			trainer.setIsActive(isActive);
-			trainer.setTrainingDurationPerMonth(objectMapper.writeValueAsString(durationMap));;
+			trainer.setTrainingDurationPerMonth(objectMapper.writeValueAsString(durationMap));
 			trainerRepository.save(trainer);
 		} catch (Exception e) {
 			log.error("Service: Error while modifying trainer's working time duration: {}", e.getMessage());
-			e.printStackTrace();
 			throw e;
 		}
 
