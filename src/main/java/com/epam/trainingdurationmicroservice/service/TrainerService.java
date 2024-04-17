@@ -1,6 +1,6 @@
 package com.epam.trainingdurationmicroservice.service;
 
-import com.epam.trainingdurationmicroservice.dto.TrainingMicroserviceDto;
+import com.epam.trainingdurationmicroservice.dto.TrainingDurationCountDto;
 import com.epam.trainingdurationmicroservice.entity.Trainer;
 import com.epam.trainingdurationmicroservice.repository.TrainerRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -13,11 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 @Component
 @Service
@@ -29,8 +29,11 @@ public class TrainerService {
 	private final ObjectMapper objectMapper;
 	private static final int START_YEAR = 2000;
 	private static final int END_YEAR = 2100;
+	private static final String ACTION_TYPE_ADD = "ADD";
+	private static final String ACTION_TYPE_DELETE = "DELETE";
+
 	@Transactional
-	public void modifyTrainerWorkingTimeDuration(TrainingMicroserviceDto request) throws ParseException, IOException {
+	public void modifyTrainerWorkingTimeDuration(TrainingDurationCountDto request) throws ParseException, IOException {
 		try {
 			String username = request.getTrainerUsername();
 			String firstName = request.getTrainerFirstName();
@@ -51,6 +54,7 @@ public class TrainerService {
 				trainerRepository.save(trainer);
 			}
 
+			LocalDate localTrainingDate = trainingDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 			Map<String, Map<String, Integer>> durationMap = objectMapper.readValue(trainer.getTrainingDurationPerMonth(), new TypeReference<Map<String, Map<String, Integer>>>() {});
 			if(durationMap == null){
 				durationMap = new HashMap<>();
@@ -58,42 +62,49 @@ public class TrainerService {
 					durationMap.put(String.valueOf(year), null);
 				}
 			}
-			Map<String, Integer> yearMap = durationMap.get(String.valueOf(trainingDate.getYear()));
+			Map<String, Integer> yearMap = durationMap.get(String.valueOf(localTrainingDate.getYear()));
 			if (yearMap == null) {
 				yearMap = new HashMap<>();
-				for (int month = 0; month < 12; month++) {
+				for (int month = 1; month < 13; month++) {
 					yearMap.put(String.valueOf(month), 0);
 				}
-			}
-
-			if (actionType.equalsIgnoreCase("ADD")) {
-				Integer modifiedDuration = duration + yearMap.get(String.valueOf(trainingDate.getMonth()));
-				log.info(modifiedDuration + " minutes");
-				yearMap.put(String.valueOf(trainingDate.getMonth()), modifiedDuration);
-				durationMap.put(String.valueOf(trainingDate.getYear()), yearMap);
-			} else if (actionType.equalsIgnoreCase("DELETE")) {
-				Integer modifiedDuration = yearMap.get(String.valueOf(trainingDate.getMonth())) - duration;
-				if (modifiedDuration < 0) {
-					modifiedDuration = 0;
-				}
-				yearMap.put(String.valueOf(trainingDate.getMonth()), modifiedDuration);
-				log.info(modifiedDuration + " minutes");
-				durationMap.put(String.valueOf(trainingDate.getYear()), yearMap);
-			} else {
-				throw new UnsupportedOperationException("Unsupported action type");
 			}
 
 			trainer.setFirstName(firstName);
 			trainer.setLastName(lastName);
 			trainer.setUsername(username);
 			trainer.setIsActive(isActive);
-			trainer.setTrainingDurationPerMonth(objectMapper.writeValueAsString(durationMap));
+			trainer.setTrainingDurationPerMonth(objectMapper.writeValueAsString(modifyDuration(durationMap, yearMap, actionType, duration, localTrainingDate)));
 			trainerRepository.save(trainer);
 		} catch (Exception e) {
 			log.error("Service: Error while modifying trainer's working time duration: {}", e.getMessage());
 			throw e;
 		}
 
+	}
+
+	private Map<String, Map<String, Integer>> modifyDuration(Map<String, Map<String, Integer>> durationMap, Map<String, Integer> yearMap, String actionType, Integer duration, LocalDate localTrainingDate) {
+		Integer modifiedDuration;
+
+		switch (actionType) {
+			case ACTION_TYPE_ADD:
+				modifiedDuration = duration + yearMap.get(String.valueOf(localTrainingDate.getMonthValue()));
+				log.info(modifiedDuration + " minutes");
+				yearMap.put(String.valueOf(localTrainingDate.getMonthValue()), modifiedDuration);
+				break;
+			case ACTION_TYPE_DELETE:
+				modifiedDuration = yearMap.get(String.valueOf(localTrainingDate.getMonthValue())) - duration;
+				if (modifiedDuration < 0) {
+					modifiedDuration = 0;
+				}
+				yearMap.put(String.valueOf(localTrainingDate.getMonthValue()), modifiedDuration);
+				log.info(modifiedDuration + " minutes");
+				break;
+			default:
+				throw new UnsupportedOperationException("Unsupported action type");
+		}
+		durationMap.put(String.valueOf(localTrainingDate.getYear()), yearMap);
+		return durationMap;
 	}
 
 }

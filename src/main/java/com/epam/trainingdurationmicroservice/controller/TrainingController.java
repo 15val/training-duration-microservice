@@ -1,6 +1,6 @@
 package com.epam.trainingdurationmicroservice.controller;
 
-import com.epam.trainingdurationmicroservice.dto.TrainingMicroserviceDto;
+import com.epam.trainingdurationmicroservice.dto.TrainingDurationCountDto;
 import com.epam.trainingdurationmicroservice.service.TrainerService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ public class TrainingController {
 	private final TrainerService trainerService;
 
 	@PostMapping("/modifyWorkingTime")
-	public ResponseEntity<HttpStatus> modifyTrainingWorkingTimeDuration(@RequestBody TrainingMicroserviceDto request) {
+	public ResponseEntity<HttpStatus> modifyTrainingWorkingTimeDuration(@RequestBody TrainingDurationCountDto request) {
 		log.info("Modifying method started");
 		try {
 			trainerService.modifyTrainerWorkingTimeDuration(request);
