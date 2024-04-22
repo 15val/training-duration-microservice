@@ -21,4 +21,5 @@ public class JmsConfig {
 		template.setConnectionFactory(connectionFactory());
 		return template;
 	}
+
 }

@@ -9,6 +9,8 @@ import org.springframework.jms.annotation.JmsListener;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.NoSuchElementException;
+
 @AllArgsConstructor
 @Slf4j
 @Component
@@ -22,6 +24,10 @@ public class ActiveMQMessageListener {
 	public void receiveMessage(String json) {
 		log.info("Receiving message started");
 		try {
+			if(json == null || json.isEmpty()) {
+				log.info("JSON is empty or missing");
+				throw new NoSuchElementException();
+			}
 			TrainingDurationCountDto trainingDurationCountDto = objectMapper.readValue(json, TrainingDurationCountDto.class);
 			trainerService.modifyTrainerWorkingTimeDuration(trainingDurationCountDto);
 			log.info("Trainer working time duration successfully changed");
