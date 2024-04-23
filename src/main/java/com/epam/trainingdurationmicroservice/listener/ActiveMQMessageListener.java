@@ -19,22 +19,24 @@ public class ActiveMQMessageListener {
 	private TrainerService trainerService;
 	private JmsTemplate jmsTemplate;
 	private ObjectMapper objectMapper;
+	private static final String  HTTP_STATUS_OK = "200";
+	private static final String  HTTP_STATUS_INTERNAL_SERVER_ERROR = "500";
 
 	@JmsListener(destination = "trainingDurationQueue")
 	public void receiveMessage(String json) {
 		log.info("Receiving message started");
 		try {
-			if(json == null || json.isEmpty()) {
+			if(json.isBlank()) {
 				log.info("JSON is empty or missing");
 				throw new NoSuchElementException();
 			}
 			TrainingDurationCountDto trainingDurationCountDto = objectMapper.readValue(json, TrainingDurationCountDto.class);
 			trainerService.modifyTrainerWorkingTimeDuration(trainingDurationCountDto);
 			log.info("Trainer working time duration successfully changed");
-			jmsTemplate.convertAndSend("trainingDurationResponseQueue", "Success");
+			jmsTemplate.convertAndSend("trainingDurationResponseQueue", HTTP_STATUS_OK);
 		} catch (Exception e) {
 			log.error("Error while modifying trainer working time duration: {}", e.getMessage());
-			jmsTemplate.convertAndSend("trainingDurationResponseQueue", "Error: " + e.getMessage());
+			jmsTemplate.convertAndSend("trainingDurationResponseQueue", HTTP_STATUS_INTERNAL_SERVER_ERROR);
 		}
 	}
 
