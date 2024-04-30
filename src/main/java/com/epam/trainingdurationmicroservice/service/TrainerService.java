@@ -32,8 +32,7 @@ public class TrainerService {
 	private static final String ACTION_TYPE_ADD = "ADD";
 	private static final String ACTION_TYPE_DELETE = "DELETE";
 
-	@Transactional
-	public void modifyTrainerWorkingTimeDuration(TrainingDurationCountDto request) throws ParseException, IOException {
+	public void modifyTrainerWorkingTimeDuration(TrainingDurationCountDto request) throws IOException {
 		try {
 			String username = request.getTrainerUsername();
 			String firstName = request.getTrainerFirstName();
@@ -44,21 +43,24 @@ public class TrainerService {
 			Date trainingDate = request.getTrainingDate();
 
 			Trainer trainer = trainerRepository.findByUsername(username).orElse(null);
-			if(trainer == null){
+			if (trainer == null) {
 				trainer = new Trainer();
 				trainer.setFirstName(firstName);
 				trainer.setLastName(lastName);
 				trainer.setUsername(username);
 				trainer.setIsActive(isActive);
 				trainer.setTrainingDurationPerMonth(null);
-				trainerRepository.save(trainer);
 			}
 
 			LocalDate localTrainingDate = trainingDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-			Map<String, Map<String, Integer>> durationMap = objectMapper.readValue(trainer.getTrainingDurationPerMonth(), new TypeReference<Map<String, Map<String, Integer>>>() {});
-			if(durationMap == null){
+			String trainingDuration = trainer.getTrainingDurationPerMonth();
+			Map<String, Map<String, Integer>> durationMap;
+			if (trainingDuration != null) {
+				durationMap = objectMapper.readValue(trainingDuration, new TypeReference<Map<String, Map<String, Integer>>>() {
+				});
+			} else {
 				durationMap = new HashMap<>();
-				for(int year = START_YEAR; year <= END_YEAR; year++){
+				for (int year = START_YEAR; year <= END_YEAR; year++) {
 					durationMap.put(String.valueOf(year), null);
 				}
 			}
@@ -70,10 +72,6 @@ public class TrainerService {
 				}
 			}
 
-			trainer.setFirstName(firstName);
-			trainer.setLastName(lastName);
-			trainer.setUsername(username);
-			trainer.setIsActive(isActive);
 			trainer.setTrainingDurationPerMonth(objectMapper.writeValueAsString(modifyDuration(durationMap, yearMap, actionType, duration, localTrainingDate)));
 			trainerRepository.save(trainer);
 		} catch (Exception e) {
