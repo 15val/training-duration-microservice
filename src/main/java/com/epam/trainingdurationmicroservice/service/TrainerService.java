@@ -1,8 +1,13 @@
 package com.epam.trainingdurationmicroservice.service;
 
+import com.epam.trainingdurationmicroservice.dto.GetTrainingDurationMapDto;
 import com.epam.trainingdurationmicroservice.dto.TrainingDurationCountDto;
+import com.epam.trainingdurationmicroservice.dto.UsernameDto;
 import com.epam.trainingdurationmicroservice.entity.Trainer;
+import com.epam.trainingdurationmicroservice.exception.TrainerIsMissingException;
+import com.epam.trainingdurationmicroservice.exception.TrainingDurationMapIsNullException;
 import com.epam.trainingdurationmicroservice.repository.TrainerRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -105,4 +110,17 @@ public class TrainerService {
 		return durationMap;
 	}
 
+	public GetTrainingDurationMapDto getTrainingDurationMapDto(UsernameDto request) throws TrainerIsMissingException, JsonProcessingException, TrainingDurationMapIsNullException {
+		String username = request.getTrainerUsername();
+		Trainer trainer = trainerRepository.findByUsername(username).orElse(null);
+		if (trainer == null) {
+			throw new TrainerIsMissingException("Trainer " + username + " not found");
+		}
+		String trainingDurationMap = trainer.getTrainingDurationPerMonth();
+		if (trainingDurationMap != null) {
+			return new GetTrainingDurationMapDto(trainingDurationMap);
+		} else {
+			throw new TrainingDurationMapIsNullException("Training duration map of the trainer " + username + " is null");
+		}
+	}
 }
