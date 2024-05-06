@@ -12,6 +12,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,12 +112,12 @@ public class TrainerService {
 		return durationMap;
 	}
 
-	public GetTrainingDurationMapDto getTrainingDurationMapDto(UsernameDto request) throws TrainerIsMissingException, JsonProcessingException, TrainingDurationMapIsNullException {
+	public GetTrainingDurationMapDto getTrainingDurationMapDto(UsernameDto request) throws TrainerIsMissingException, TrainingDurationMapIsNullException {
+		log.info("Getting duration map started");
 		String username = request.getTrainerUsername();
-		Trainer trainer = trainerRepository.findByUsername(username).orElse(null);
-		if (trainer == null) {
-			throw new TrainerIsMissingException("Trainer " + username + " not found");
-		}
+		Trainer trainer = trainerRepository.findByUsername(username)
+				.orElseThrow(() -> new TrainerIsMissingException("Trainer " + username + " not found"));
+
 		String trainingDurationMap = trainer.getTrainingDurationPerMonth();
 		if (trainingDurationMap != null) {
 			return new GetTrainingDurationMapDto(trainingDurationMap);
