@@ -31,7 +31,7 @@ public class SecurityConfig {
 							return config;
 						}))
 				.authorizeHttpRequests((auth) -> auth
-						.requestMatchers("/training/modifyWorkingTime").permitAll()
+						.requestMatchers("/trainer/getWorkingTime").permitAll()
 				)
 				.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));

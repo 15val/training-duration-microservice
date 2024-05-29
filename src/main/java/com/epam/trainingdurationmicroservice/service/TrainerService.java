@@ -1,12 +1,19 @@
 package com.epam.trainingdurationmicroservice.service;
 
+import com.epam.trainingdurationmicroservice.dto.GetTrainingDurationMapDto;
 import com.epam.trainingdurationmicroservice.dto.TrainingDurationCountDto;
+import com.epam.trainingdurationmicroservice.dto.UsernameDto;
 import com.epam.trainingdurationmicroservice.entity.Trainer;
+import com.epam.trainingdurationmicroservice.exception.TrainerIsMissingException;
+import com.epam.trainingdurationmicroservice.exception.TrainingDurationMapIsNullException;
 import com.epam.trainingdurationmicroservice.repository.TrainerRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,8 +39,7 @@ public class TrainerService {
 	private static final String ACTION_TYPE_ADD = "ADD";
 	private static final String ACTION_TYPE_DELETE = "DELETE";
 
-	@Transactional
-	public void modifyTrainerWorkingTimeDuration(TrainingDurationCountDto request) throws ParseException, IOException {
+	public void modifyTrainerWorkingTimeDuration(TrainingDurationCountDto request) throws IOException {
 		try {
 			String username = request.getTrainerUsername();
 			String firstName = request.getTrainerFirstName();
@@ -44,21 +50,24 @@ public class TrainerService {
 			Date trainingDate = request.getTrainingDate();
 
 			Trainer trainer = trainerRepository.findByUsername(username).orElse(null);
-			if(trainer == null){
+			if (trainer == null) {
 				trainer = new Trainer();
 				trainer.setFirstName(firstName);
 				trainer.setLastName(lastName);
 				trainer.setUsername(username);
 				trainer.setIsActive(isActive);
 				trainer.setTrainingDurationPerMonth(null);
-				trainerRepository.save(trainer);
 			}
 
 			LocalDate localTrainingDate = trainingDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-			Map<String, Map<String, Integer>> durationMap = objectMapper.readValue(trainer.getTrainingDurationPerMonth(), new TypeReference<Map<String, Map<String, Integer>>>() {});
-			if(durationMap == null){
+			String trainingDuration = trainer.getTrainingDurationPerMonth();
+			Map<String, Map<String, Integer>> durationMap;
+			if (trainingDuration != null) {
+				durationMap = objectMapper.readValue(trainingDuration, new TypeReference<Map<String, Map<String, Integer>>>() {
+				});
+			} else {
 				durationMap = new HashMap<>();
-				for(int year = START_YEAR; year <= END_YEAR; year++){
+				for (int year = START_YEAR; year <= END_YEAR; year++) {
 					durationMap.put(String.valueOf(year), null);
 				}
 			}
@@ -70,10 +79,6 @@ public class TrainerService {
 				}
 			}
 
-			trainer.setFirstName(firstName);
-			trainer.setLastName(lastName);
-			trainer.setUsername(username);
-			trainer.setIsActive(isActive);
 			trainer.setTrainingDurationPerMonth(objectMapper.writeValueAsString(modifyDuration(durationMap, yearMap, actionType, duration, localTrainingDate)));
 			trainerRepository.save(trainer);
 		} catch (Exception e) {
@@ -107,4 +112,17 @@ public class TrainerService {
 		return durationMap;
 	}
 
+	public GetTrainingDurationMapDto getTrainingDurationMapDto(UsernameDto request) throws TrainerIsMissingException, TrainingDurationMapIsNullException {
+		log.info("Getting duration map started");
+		String username = request.getTrainerUsername();
+		Trainer trainer = trainerRepository.findByUsername(username)
+				.orElseThrow(() -> new TrainerIsMissingException("Trainer " + username + " not found"));
+
+		String trainingDurationMap = trainer.getTrainingDurationPerMonth();
+		if (trainingDurationMap != null) {
+			return new GetTrainingDurationMapDto(trainingDurationMap);
+		} else {
+			throw new TrainingDurationMapIsNullException("Training duration map of the trainer " + username + " is null");
+		}
+	}
 }
